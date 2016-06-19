@@ -1,5 +1,3 @@
-package com.example.android.weather;
-
 import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;

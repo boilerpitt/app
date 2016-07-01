@@ -1,9 +1,7 @@
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,9 +19,11 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    //button declaration
     private Button mConcertButton;
     private Button mSongButton;
 
@@ -89,39 +89,51 @@ public class MainActivity extends AppCompatActivity {
         double longitude = gps.getLongitude();
 
         //converts the latitude and longitude into a string that can be read by the php code
-        String queryurl = "http://eqo.com/getsongjson.php?latitude="+latitude+"&longitude="+longitude;
+        String queryurl = "http://eqo.com/get_songs.php?latitude="+latitude+"&longitude="+longitude;
 
-        //the php url will be entered here to call the method, get JSON data
-        JSONArray jsonArray = getJSON(queryurl);
+        //async task to perform in background
+        class MyAsync extends AsyncTask<String, Integer, Song>{
 
-        //declaration of song array
-        Song song_data[] = new Song[]
-                {
-                };
+            Song song_data[] = null;
 
+            @Override
+            protected Song doInBackground(String... params) {
 
-        //loop through the JSON data, get info, put into a new Song row in the array above
-            if(jsonArray.length() > 0){
-                int len = jsonArray.length();
-                for (int i=0;i<len;i++){
-                    try {
-                        JSONObject object = jsonArray.getJSONObject(i);
-                        String Song = object.getString("Song");
-                        String Artist = object.getString("Artist");
-                        String Genre = object.getString("Genre");
+                //calls the above method to get JSON data
+                JSONArray jsonArray = getJSON(params[0]);
 
-                        new Song(Song, Artist, Genre,"");
+                //loop through the JSON data, get info, put into a new Song row in the array above
+                if(jsonArray.length() > 0){
+                    int len = jsonArray.length();
+                    for (int i=0;i<len;i++){
+                        try {
+                            JSONObject object = jsonArray.getJSONObject(i);
+                            String Song = object.getString("Song");
+                            String Artist = object.getString("Artist");
+                            String Genre = object.getString("Genre");
+                            String File = object.getString("File");
 
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                                new Song(Song, Artist, Genre, File);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
-            }
 
-        //creates adapter, sets it
-        SongAdapter adapter = new SongAdapter(this, R.layout.listview_item_row, song_data);
-        ListView listView1 = (ListView) findViewById(R.id.listView1);
-        listView1.setAdapter(adapter);
+                return null;
+            }
+            @Override
+            protected void onPostExecute(Song result){
+                //creates adapter, sets it
+                SongAdapter adapter = new SongAdapter(MainActivity.this, R.layout.listview_item_row, song_data);
+                ListView listView1 = (ListView) findViewById(R.id.listView1);
+                listView1.setAdapter(adapter);
+            }
+        }
+
+        //calls the asynctask
+        new MyAsync().execute(queryurl);
 
         //binds fields to buttons
         mConcertButton = (Button)findViewById(R.id.ConcertButton);
